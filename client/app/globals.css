@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+/* Design tokens from the UI guidelines. In Tailwind v4 these live in CSS —
+   every `--color-*` entry generates bg-, text-, border-, ring- utilities. */
+@theme {
+  --color-brand-charcoal: #181818;
+  --color-brand-champagne: #c6a76a;
+  --color-brand-champagne-light: #efe7d8;
+
+  --color-background: #f8f7f4;
+  --color-surface: #ffffff;
+
+  --color-text-primary: #292929;
+  --color-text-muted: #737373;
+
+  --color-line: #e7e3dc;
+
+  --color-success: #2f7d57;
+  --color-success-surface: #eaf5ef;
+  --color-warning: #9a6b18;
+  --color-warning-surface: #fbf3e2;
+  --color-danger: #b54b4b;
+  --color-danger-surface: #fbeded;
+  --color-info: #4a6fa5;
+  --color-info-surface: #edf3fa;
+
+  --font-sans: var(--font-plex-arabic), system-ui, sans-serif;
+
+  --radius-card: 14px;
+  --shadow-card: 0 1px 2px rgb(24 24 24 / 0.04), 0 8px 24px rgb(24 24 24 / 0.06);
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-text-primary);
+  }
+  :where(a, button, input, select, textarea):focus-visible {
+    outline: 2px solid var(--color-brand-champagne);
+    outline-offset: 2px;
+  }
+}
