@@ -15,9 +15,18 @@ export class HttpError extends Error {
   }
 }
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
+/**
+ * In the browser the base is empty: calls go to `/api/...` on this site and
+ * the rewrite in `next.config.ts` forwards them to the backend. On the
+ * server there is no site origin to be relative to, so it calls the backend
+ * directly.
+ */
+const BASE_URL =
+  typeof window === "undefined"
+    ? (process.env.API_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5052").replace(/\/+$/, "")
+    : "";
 
-/** Absolute URL for an API path — for callers that can't go through `http()` (XHR uploads). */
+/** URL for an API path — for callers that can't go through `http()` (XHR uploads). */
 export function apiUrl(path: string): string {
   return `${BASE_URL}${path}`;
 }
