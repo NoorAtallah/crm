@@ -1,121 +1,72 @@
 /**
- * Documents domain. Shapes follow the Legal CRM API documentation
- * (Legal Work APIs → Upload Document / Review Document).
+ * Documents = the personal file manager. Shapes follow the Legal CRM API:
  *
- * Note: the API doc defines POST /api/legal-work/documents and
- * POST /api/legal-work/documents/{id}/review, but no list endpoint —
- * even though `documents.read.own` / `documents.read.all` exist in the
- * permissions table. `api/http.ts` assumes GET /api/legal-work/documents;
- * confirm the URL with the backend before flipping `api/index.ts`.
+ *   GET    /api/file-manager/contents?folderId=&page=&pageSize=   → FolderContentsResponse
+ *   POST   /api/file-manager/folders                  ← { name, parentFolderId }
+ *   PUT    /api/file-manager/folders/{id}/location    ← { parentFolderId }
+ *   DELETE /api/file-manager/folders/{id}?recursive=
+ *   POST   /api/file-manager/files                    ← multipart: file, folderId?   (≤ 50 MiB)
+ *   GET    /api/file-manager/files/{id}               → FileEntryResponse
+ *   GET    /api/file-manager/files/{id}/content       → bytes
+ *   PUT    /api/file-manager/files/{id}/location      ← { folderId }
+ *   DELETE /api/file-manager/files/{id}
+ *
+ * Everything is scoped to the signed-in user by the API — no permission
+ * checks needed here.
  */
 
-import type { Role } from "../auth";
-
-/** DocumentStatus enum, verbatim from the API doc. */
-export type DocumentStatus = "Uploaded" | "Reviewed";
-
-/** What the API returns for a document (DocumentResponse). */
-export interface DocumentResponse {
+export interface Folder {
   id: string;
-  caseId: string;
+  parentFolderId: string | null;
+  name: string;
+  createdAtUtc: string;
+}
+
+export interface FileEntry {
+  id: string;
+  folderId: string | null;
   fileName: string;
-  status: DocumentStatus;
-  visibleToClient: boolean;
-  uploadedByEmployeeId: string;
-  reviewedByEmployeeId: string | null;
-  internalNotes: string | null;
-  /** Not in the documented response yet — optional until the backend adds it. */
-  uploadedAtUtc?: string;
-  reviewedAtUtc?: string | null;
+  contentType: string;
+  sizeBytes: number;
+  contentUrl: string;
+  createdAtUtc: string;
 }
 
-/** A document once the case and the people on it have been resolved to names. */
-export interface DocumentRow extends DocumentResponse {
-  caseNumber: string;
-  caseTitle: string;
-  uploadedByName: string;
-  reviewedByName: string | null;
-  uploadedAtUtc: string;
-  reviewedAtUtc: string | null;
-  /** Byte size of the picked file. Local only — the API stores no binary. */
-  sizeBytes: number | null;
-  /**
-   * Object URL for a file picked in this browser session, so the drawer can
-   * open it. Never sent anywhere, and gone on reload.
-   */
-  previewUrl: string | null;
+export interface FolderContents {
+  folderId: string | null;
+  folders: Folder[];
+  files: FileEntry[];
+  totalFolders: number;
+  totalFiles: number;
+  page: number;
+  pageSize: number;
 }
 
-/** Cases the viewer may file documents against — fills the filter and the dialog. */
-export interface CaseRef {
-  id: string;
-  caseNumber: string;
-  title: string;
+/** One step of the breadcrumb. `id: null` is the root ("My files"). */
+export interface Crumb {
+  id: string | null;
+  name: string;
 }
 
-export type VisibilityFilter = "all" | "client" | "internal";
-export type StatusFilter = "all" | DocumentStatus;
+export const PAGE_SIZE = 50;
+export const MAX_FILE_BYTES = 50 * 1024 * 1024;
 
-export interface DocumentsQuery {
-  caseId: string | null;
-  status: StatusFilter;
-  visibility: VisibilityFilter;
-  /** Matches file name, case number or case title. */
-  search: string;
+/** An upload in flight or finished, shown in the upload queue. */
+export interface UploadItem {
+  key: string;
+  name: string;
+  size: number;
+  progress: number; // 0..1
+  state: "uploading" | "done" | "error";
+  error?: string;
 }
 
-export const emptyQuery: DocumentsQuery = {
-  caseId: null,
-  status: "all",
-  visibility: "all",
-  search: "",
+export const emptyContents: FolderContents = {
+  folderId: null,
+  folders: [],
+  files: [],
+  totalFolders: 0,
+  totalFiles: 0,
+  page: 1,
+  pageSize: PAGE_SIZE,
 };
-
-export interface DocumentsSummary {
-  cases: CaseRef[];
-  documents: DocumentRow[];
-}
-
-/**
- * POST /api/legal-work/documents — the API takes metadata only.
- * `file` is picked in the browser and never leaves it: the mock keeps it so
- * the page behaves like a real document store, and `http.ts` drops it.
- * When the backend accepts a binary, send this as multipart there.
- */
-export interface UploadDocumentInput {
-  caseId: string;
-  fileName: string;
-  visibleToClient: boolean;
-  file?: File | null;
-}
-
-/** POST /api/legal-work/documents/{documentId}/review */
-export interface ReviewDocumentInput {
-  internalNotes: string;
-}
-
-/**
- * What this page's actions need, in the API's permission keys.
- * Until the session carries `permissions[]` from /api/auth/login, they are
- * derived from the role we already have. One place to change later.
- */
-export interface DocumentAbilities {
-  canUpload: boolean; // documents.upload
-  canReview: boolean; // documents.review
-  canReadAll: boolean; // documents.read.all vs documents.read.own
-}
-
-export function abilitiesForRole(role: Role): DocumentAbilities {
-  switch (role) {
-    case "owner":
-      return { canUpload: true, canReview: true, canReadAll: true };
-    case "branch_manager":
-      return { canUpload: true, canReview: true, canReadAll: true };
-    case "lawyer":
-      return { canUpload: true, canReview: true, canReadAll: false };
-    case "secretary":
-      return { canUpload: true, canReview: false, canReadAll: false };
-    case "client":
-      return { canUpload: false, canReview: false, canReadAll: false };
-  }
-}

@@ -8,9 +8,9 @@ import { httpAuthApi } from "./http";
  *    export const authApi = httpAuthApi;
  * ─────────────────────────────────────────────────────────────
  */
-export const authApi = mockAuthApi;
+export const authApi = httpAuthApi;
 
 // Keep both referenced so neither drifts out of sync with the contract.
-void httpAuthApi;
+void mockAuthApi;
 
 export type { AuthApi } from "./contract";

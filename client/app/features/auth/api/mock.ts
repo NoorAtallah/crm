@@ -16,6 +16,8 @@ const ACCOUNTS: Record<string, { password: string; user: AuthUser }> = {
       role: "owner",
       officeId: null,
       teamIds: [],
+      permissions: [],
+      isSuperAdmin: false,
     },
   },
   "maya@firm.jo": {
@@ -27,6 +29,8 @@ const ACCOUNTS: Record<string, { password: string; user: AuthUser }> = {
       role: "lawyer",
       officeId: "off_amman",
       teamIds: ["team_contracts"],
+      permissions: [],
+      isSuperAdmin: false,
     },
   },
   "client@ayman-trading.jo": {
@@ -38,6 +42,8 @@ const ACCOUNTS: Record<string, { password: string; user: AuthUser }> = {
       role: "client",
       officeId: "off_amman",
       teamIds: [],
+      permissions: [],
+      isSuperAdmin: false,
     },
   },
 };

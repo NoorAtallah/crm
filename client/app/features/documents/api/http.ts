@@ -1,106 +1,93 @@
-import { http } from "../../../lib/http";
-import type {
-  CaseRef,
-  DocumentResponse,
-  DocumentRow,
-  DocumentsQuery,
-  DocumentsSummary,
-  ReviewDocumentInput,
-  UploadDocumentInput,
-} from "../types";
+import { apiUrl, http, httpBlob, HttpError, readToken } from "../../../lib/http";
+import { PAGE_SIZE, type FileEntry, type Folder, type FolderContents } from "../types";
 import type { DocumentsApi } from "./contract";
 
-/**
- * Live implementation. Base URL comes from NEXT_PUBLIC_API_URL
- * (development: http://localhost:5052).
- *
- * The list call is an assumption — see the note in `../types.ts`. If the
- * backend exposes documents per case instead, this is the only file to change.
- */
-
-const DOCUMENTS = "/api/legal-work/documents";
-const CASES = "/api/legal-work/cases";
-
-interface LegalCaseResponse {
-  id: string;
-  caseNumber: string;
-  title: string;
-}
-
-interface EmployeeResponse {
-  id: string;
-  fullName: string;
-}
+const BASE = "/api/file-manager";
 
 /**
- * The API returns ids, the table shows names. Until the backend expands
- * them, they are resolved client-side against cases and employees.
+ * Upload goes through XHR, not fetch — fetch still can't report upload
+ * progress. Errors come back as the same HttpError `http()` throws.
  */
-function toRow(
-  document: DocumentResponse,
-  cases: Map<string, LegalCaseResponse>,
-  people: Map<string, string>
-): DocumentRow {
-  const legalCase = cases.get(document.caseId);
+async function upload(
+  file: File,
+  folderId: string | null,
+  onProgress?: (share: number) => void,
+  signal?: AbortSignal
+): Promise<FileEntry> {
+  const token = await readToken();
+  const form = new FormData();
+  form.append("file", file);
+  if (folderId) form.append("folderId", folderId);
 
-  return {
-    ...document,
-    caseNumber: legalCase?.caseNumber ?? "—",
-    caseTitle: legalCase?.title ?? "—",
-    uploadedByName: people.get(document.uploadedByEmployeeId) ?? "—",
-    reviewedByName: document.reviewedByEmployeeId
-      ? people.get(document.reviewedByEmployeeId) ?? "—"
-      : null,
-    uploadedAtUtc: document.uploadedAtUtc ?? new Date().toISOString(),
-    reviewedAtUtc: document.reviewedAtUtc ?? null,
-    sizeBytes: null,
-    previewUrl: null,
-  };
+  return new Promise<FileEntry>((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", apiUrl(`${BASE}/files`));
+    if (token) xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+
+    xhr.upload.onprogress = (event) => {
+      if (event.lengthComputable) onProgress?.(event.loaded / event.total);
+    };
+    xhr.onload = () => {
+      let body: unknown = null;
+      try {
+        body = xhr.responseText ? JSON.parse(xhr.responseText) : null;
+      } catch {
+        body = xhr.responseText;
+      }
+      if (xhr.status >= 200 && xhr.status < 300) resolve(body as FileEntry);
+      else reject(new HttpError(xhr.status, body));
+    };
+    xhr.onerror = () => reject(new HttpError(0, null));
+    xhr.onabort = () => reject(new DOMException("Upload cancelled", "AbortError"));
+
+    signal?.addEventListener("abort", () => xhr.abort(), { once: true });
+    xhr.send(form);
+  });
 }
 
 export const httpDocumentsApi: DocumentsApi = {
-  async list(query: DocumentsQuery): Promise<DocumentsSummary> {
-    const params = new URLSearchParams();
-    if (query.caseId) params.set("caseId", query.caseId);
-    if (query.status !== "all") params.set("status", query.status);
-
-    const [documents, cases, employees] = await Promise.all([
-      http<DocumentResponse[]>(`${DOCUMENTS}?${params}`),
-      http<LegalCaseResponse[]>(CASES),
-      http<EmployeeResponse[]>("/api/identity/employees"),
-    ]);
-
-    const caseMap = new Map(cases.map((item) => [item.id, item]));
-    const peopleMap = new Map(employees.map((item) => [item.id, item.fullName]));
-
-    return {
-      cases: cases.map(
-        ({ id, caseNumber, title }): CaseRef => ({ id, caseNumber, title })
-      ),
-      documents: documents.map((document) =>
-        toRow(document, caseMap, peopleMap)
-      ),
-    };
+  contents(folderId, page = 1) {
+    const params = new URLSearchParams({ page: String(page), pageSize: String(PAGE_SIZE) });
+    if (folderId) params.set("folderId", folderId);
+    return http<FolderContents>(`${BASE}/contents?${params}`);
   },
 
-  async upload(input: UploadDocumentInput): Promise<DocumentRow> {
-    // The documented body is metadata only — the picked file stays local.
-    const { caseId, fileName, visibleToClient } = input;
-    const created = await http<DocumentResponse>(DOCUMENTS, {
+  createFolder(name, parentFolderId) {
+    return http<Folder>(`${BASE}/folders`, {
       method: "POST",
-      body: JSON.stringify({ caseId, fileName, visibleToClient }),
+      body: JSON.stringify({ name, parentFolderId }),
     });
-    return toRow(created, new Map(), new Map());
   },
 
-  async review(
-    documentId: string,
-    input: ReviewDocumentInput
-  ): Promise<DocumentRow> {
-    const reviewed = await http<DocumentResponse>(
-      `${DOCUMENTS}/${documentId}/review`,
-      { method: "POST", body: JSON.stringify(input) }
-    );
-    return toRow(reviewed, new Map(), new Map());
+  moveFolder(folderId, parentFolderId) {
+    return http<Folder>(`${BASE}/folders/${folderId}/location`, {
+      method: "PUT",
+      body: JSON.stringify({ parentFolderId }),
+    });
+  },
+
+  async deleteFolder(folderId, recursive) {
+    await http<null>(`${BASE}/folders/${folderId}?recursive=${recursive}`, { method: "DELETE" });
+  },
+
+  upload,
+
+  getFile(fileId) {
+    return http<FileEntry>(`${BASE}/files/${fileId}`);
+  },
+
+  moveFile(fileId, folderId) {
+    return http<FileEntry>(`${BASE}/files/${fileId}/location`, {
+      method: "PUT",
+      body: JSON.stringify({ folderId }),
+    });
+  },
+
+  async deleteFile(fileId) {
+    await http<null>(`${BASE}/files/${fileId}`, { method: "DELETE" });
+  },
+
+  content(fileId) {
+    return httpBlob(`${BASE}/files/${fileId}/content`);
   },
 };

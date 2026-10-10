@@ -1,33 +1,26 @@
 import type { Metadata } from "next";
-import { authApi } from "../../features/auth";
 import {
   DocumentsView,
-  abilitiesForRole,
   documentsApi,
   documentsDictionaries,
-  emptyQuery,
+  emptyContents,
+  type FolderContents,
 } from "../../features/documents";
 import { getDictionary, getLocale } from "../../lib/i18n";
 
 export const metadata: Metadata = { title: "Documents · Legal CRM" };
 
 export default async function DocumentsPage() {
-  const [locale, t, session, summary] = await Promise.all([
-    getLocale(),
-    getDictionary(documentsDictionaries),
-    authApi.currentSession(),
-    documentsApi.list(emptyQuery),
-  ]);
+  const [locale, t] = await Promise.all([getLocale(), getDictionary(documentsDictionaries)]);
 
-  // The shell already redirects a signed-out viewer; this keeps the types honest.
-  const role = session?.user.role ?? "secretary";
+  // Root of the signed-in user's file manager; folders load client-side from here.
+  let contents: FolderContents = emptyContents;
+  let failed = false;
+  try {
+    contents = await documentsApi.contents(null, 1);
+  } catch {
+    failed = true;
+  }
 
-  return (
-    <DocumentsView
-      initial={summary}
-      abilities={abilitiesForRole(role)}
-      t={t}
-      locale={locale}
-    />
-  );
+  return <DocumentsView initial={contents} failed={failed} t={t} locale={locale} />;
 }

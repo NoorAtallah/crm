@@ -17,6 +17,10 @@ export interface AuthUser {
   role: Role;
   officeId: string | null;
   teamIds: string[];
+  /** Permission keys from the API (e.g. "employees.manage"). */
+  permissions: string[];
+  /** True for the API's SuperAdmin type — some actions are theirs alone. */
+  isSuperAdmin: boolean;
 }
 
 export interface AuthSession {

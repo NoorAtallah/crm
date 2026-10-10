@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import {
+  Activity,
   Briefcase,
   Building2,
   CalendarDays,
@@ -8,7 +9,9 @@ import {
   ListChecks,
   MessageSquareQuote,
   Receipt,
+  ShieldCheck,
   ChartColumn,
+  UserCog,
   Users,
 } from "lucide-react";
 import type { Role } from "../../features/auth";
@@ -40,6 +43,9 @@ export const NAV_ITEMS: NavItem[] = [
   { key: "documents", href: "/documents", icon: FileText, roles: STAFF },
   { key: "billing", href: "/billing", icon: Receipt, roles: MANAGERS },
   { key: "reports", href: "/reports", icon: ChartColumn, roles: MANAGERS },
+  { key: "staff", href: "/staff", icon: UserCog, roles: MANAGERS },
+  { key: "roles", href: "/roles", icon: ShieldCheck, roles: MANAGERS },
+  { key: "activity", href: "/activity", icon: Activity, roles: MANAGERS },
   { key: "offices", href: "/offices", icon: Building2, roles: MANAGERS },
 ];
 
@@ -55,7 +61,10 @@ export const shellDictionaries = {
       documents: "الوثائق",
       billing: "الفوترة",
       reports: "التقارير",
-      offices: "المكاتب والموظفون",
+      staff: "الموظفون",
+      roles: "الأدوار والصلاحيات",
+      activity: "سجل النشاط",
+      offices: "المكاتب",
     },
     roles: {
       owner: "المدير العام",
@@ -82,7 +91,10 @@ export const shellDictionaries = {
       documents: "Documents",
       billing: "Billing",
       reports: "Reports",
-      offices: "Offices & staff",
+      staff: "Staff",
+      roles: "Roles & permissions",
+      activity: "Activity log",
+      offices: "Offices",
     },
     roles: {
       owner: "Managing partner",

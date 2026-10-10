@@ -1,30 +1,92 @@
 import { http, HttpError } from "../../../lib/http";
-import { AuthError, type AuthSession } from "../types";
+import { AuthError, type AuthSession, type AuthUser, type Role } from "../types";
 import type { AuthApi } from "./contract";
 
 /**
- * Live implementation. Adjust the paths and the response mapping to match
- * your backend, then flip the export in `api/index.ts`.
+ * Live implementation against the Legal CRM API (ASP.NET Core).
+ *
+ *   POST /api/auth/login   → LoginResponse
+ *   GET  /api/identity/me  → CurrentEmployeeResponse (needs the Bearer token)
+ *
+ * The API has no logout endpoint yet — sessions expire server-side after
+ * 8 hours, so signing out only drops the token on this side.
  */
+
+/** EmployeeType enum, serialized as a string by the API. */
+type EmployeeType =
+  | "SuperAdmin"
+  | "OfficeManager"
+  | "Lawyer"
+  | "Secretary"
+  | "Client";
+
+interface CurrentEmployeeResponse {
+  id: string;
+  fullName: string;
+  email: string;
+  type: EmployeeType;
+  roleId: string;
+  roleName: string;
+  permissions: string[];
+}
+
+interface LoginResponse {
+  token: string;
+  expiresAtUtc: string;
+  employee: CurrentEmployeeResponse;
+}
+
+const roleForType: Record<EmployeeType, Role> = {
+  SuperAdmin: "owner",
+  OfficeManager: "branch_manager",
+  Lawyer: "lawyer",
+  Secretary: "secretary",
+  Client: "client",
+};
+
+function toUser(employee: CurrentEmployeeResponse): AuthUser {
+  return {
+    id: employee.id,
+    fullName: employee.fullName,
+    email: employee.email,
+    role: roleForType[employee.type] ?? "secretary",
+    // Not exposed by the API yet.
+    officeId: null,
+    teamIds: [],
+    permissions: employee.permissions ?? [],
+    isSuperAdmin: employee.type === "SuperAdmin",
+  };
+}
+
 export const httpAuthApi: AuthApi = {
-  async signIn(credentials) {
+  async signIn({ email, password }) {
     try {
-      return await http<AuthSession>("/auth/login", {
+      const response = await http<LoginResponse>("/api/auth/login", {
         method: "POST",
-        body: JSON.stringify(credentials),
+        body: JSON.stringify({ email, password }),
       });
+      return {
+        user: toUser(response.employee),
+        token: response.token,
+        expiresAt: response.expiresAtUtc,
+      };
     } catch (error) {
       throw toAuthError(error);
     }
   },
 
   async signOut() {
-    await http<void>("/auth/logout", { method: "POST" });
+    // No server endpoint — the caller clears the session cookie.
   },
 
-  async currentSession() {
+  async currentSession(): Promise<AuthSession | null> {
     try {
-      return await http<AuthSession>("/auth/session");
+      const employee = await http<CurrentEmployeeResponse>("/api/identity/me");
+      return {
+        user: toUser(employee),
+        token: "",
+        expiresAt: new Date(Date.now() + 864e5).toISOString(),
+      };
     } catch {
       return null;
     }
