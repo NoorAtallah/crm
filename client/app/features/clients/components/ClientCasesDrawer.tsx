@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Briefcase, Loader2, Mail, X } from "lucide-react";
 import { Alert } from "../../../components/ui/Alert";
+import { AccountPanel } from "../../accounts";
 import { Badge } from "../../../components/ui/Badge";
 import { formatDate } from "../../../lib/format";
 import { HttpError } from "../../../lib/http";
@@ -20,11 +21,17 @@ type State =
 export function ClientCasesDrawer({
   client,
   onClose,
+  canManage = false,
+  isSuperAdmin = false,
+  onChanged,
   t,
   locale,
 }: {
   client: Client | null;
   onClose: () => void;
+  canManage?: boolean;
+  isSuperAdmin?: boolean;
+  onChanged?: (client: Client) => void;
   t: ClientsDict;
   locale: Locale;
 }) {
@@ -105,6 +112,21 @@ export function ClientCasesDrawer({
             </header>
 
             <div className="flex-1 overflow-y-auto px-5 py-5">
+              <div className="mb-6 border-b border-line pb-6">
+                <AccountPanel
+                  key={client.id}
+                  userId={client.id}
+                  kind="client"
+                  fullName={client.fullName}
+                  email={client.email}
+                  clientType={client.clientType}
+                  isActive={client.isActive}
+                  canManage={canManage}
+                  isSuperAdmin={isSuperAdmin}
+                  locale={locale}
+                  onAccountChanged={(patch) => onChanged?.({ ...client, ...patch })}
+                />
+              </div>
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="text-[13.5px] font-semibold text-text-primary">{t.cases}</h3>
                 {state.kind === "ready" && (

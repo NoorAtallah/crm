@@ -1,5 +1,7 @@
 "use client";
 
+import { AccountPanel } from "../../accounts";
+
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Check, Loader2, Lock, ShieldCheck, X } from "lucide-react";
@@ -306,6 +308,20 @@ export function EmployeeDrawer({
                   </div>
                 )}
               </section>
+
+              {/* Account, status, password, profile */}
+              <AccountPanel
+                key={employee.id}
+                userId={employee.id}
+                kind="employee"
+                fullName={employee.fullName}
+                email={employee.email}
+                isActive={employee.isActive}
+                canManage={abilities.canManage}
+                isSuperAdmin={abilities.isSuperAdmin}
+                locale={locale}
+                onAccountChanged={(patch) => onChanged({ ...employee, ...patch })}
+              />
 
               {/* Effective permissions — straight from the API */}
               <section>

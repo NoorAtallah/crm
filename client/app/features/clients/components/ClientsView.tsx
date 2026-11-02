@@ -7,6 +7,7 @@ import { Alert } from "../../../components/ui/Alert";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
 import { Card, EmptyState } from "../../../components/ui/Card";
+import { ExportButton } from "../../../components/ui/ExportButton";
 import { interpolate, type Locale } from "../../../lib/i18n";
 import type { ClientsDict } from "../i18n";
 import type { Client, ClientsAbilities } from "../types";
@@ -75,6 +76,7 @@ export function ClientsView({
           <p className="text-[13px] tabular-nums text-text-muted">
             {interpolate(t.countLabel, { count: visible.length })}
           </p>
+          {abilities.canRead && <ExportButton path="clients" fileName="clients" locale={locale} />}
           {abilities.canCreate && (
             <Button
               type="button"
@@ -197,7 +199,18 @@ export function ClientsView({
         t={t}
       />
 
-      <ClientCasesDrawer client={selected} onClose={() => setSelected(null)} t={t} locale={locale} />
+      <ClientCasesDrawer
+        client={selected}
+        onClose={() => setSelected(null)}
+        canManage={abilities.canCreate}
+        isSuperAdmin={abilities.isSuperAdmin}
+        onChanged={(next) => {
+          setSelected(next);
+          setClients((prev) => prev.map((c) => (c.id === next.id ? next : c)));
+        }}
+        t={t}
+        locale={locale}
+      />
     </div>
   );
 }

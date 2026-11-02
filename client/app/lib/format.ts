@@ -67,3 +67,18 @@ export function formatFileSize(bytes: number, locale: Locale): string {
   }).format(value);
   return `${rounded} ${units[unit]}`;
 }
+
+/** Money in its own currency — no conversion. JOD/KWD/BHD use 3 decimals. */
+export function formatMoney(amount: number, currency: string | null | undefined, locale: Locale): string {
+  const code = (currency || "JOD").toUpperCase();
+  try {
+    return new Intl.NumberFormat(NUMERIC_LOCALE[locale], {
+      style: "currency",
+      currency: code,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 3,
+    }).format(amount);
+  } catch {
+    return `${amount.toFixed(3)} ${code}`;
+  }
+}

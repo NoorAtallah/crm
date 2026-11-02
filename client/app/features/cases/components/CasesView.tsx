@@ -1,17 +1,20 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { motion, useReducedMotion } from "framer-motion";
 import { Briefcase, Plus, Search } from "lucide-react";
 import { Alert } from "../../../components/ui/Alert";
 import { Badge } from "../../../components/ui/Badge";
 import { Button } from "../../../components/ui/Button";
 import { Card, EmptyState } from "../../../components/ui/Card";
+import { ExportButton } from "../../../components/ui/ExportButton";
 import { formatDate } from "../../../lib/format";
 import { interpolate, type Locale } from "../../../lib/i18n";
 import type { CasesDict } from "../i18n";
 import type { CaseRow, PersonOption } from "../types";
 import { NewCaseDialog } from "./NewCaseDialog";
+import { stageTone } from "./detail/shared";
 
 type StatusFilter = "all" | "active" | "closed";
 
@@ -32,6 +35,7 @@ export function CasesView({
   locale: Locale;
 }) {
   const reduceMotion = useReducedMotion();
+  const router = useRouter();
   const [cases, setCases] = useState(initialCases);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [createdNumber, setCreatedNumber] = useState<string | null>(null);
@@ -68,6 +72,12 @@ export function CasesView({
           <p className="text-[13px] tabular-nums text-text-muted">
             {interpolate(t.countLabel, { count: visible.length })}
           </p>
+          <ExportButton
+            path="cases"
+            filters={{ search: search.trim(), isActive: status === "all" ? undefined : status === "active" }}
+            fileName="cases"
+            locale={locale}
+          />
           {canCreate && (
             <Button
               type="button"
@@ -136,13 +146,14 @@ export function CasesView({
           <EmptyState>{t.empty}</EmptyState>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[760px] border-collapse text-start">
+            <table className="w-full min-w-[860px] border-collapse text-start">
               <thead>
                 <tr className="border-b border-line text-[12.5px] text-text-muted">
                   <th className="px-5 py-3 text-start font-medium">{t.columns.number}</th>
                   <th className="px-5 py-3 text-start font-medium">{t.columns.title}</th>
                   <th className="px-5 py-3 text-start font-medium">{t.columns.lawyer}</th>
                   <th className="px-5 py-3 text-start font-medium">{t.columns.client}</th>
+                  <th className="px-5 py-3 text-start font-medium">{t.stageColumn}</th>
                   <th className="px-5 py-3 text-start font-medium">{t.columns.status}</th>
                   <th className="px-5 py-3 text-start font-medium">{t.columns.createdAt}</th>
                 </tr>
@@ -158,7 +169,8 @@ export function CasesView({
                       ease: "easeOut",
                       delay: Math.min(index * 0.03, 0.18),
                     }}
-                    className="transition-colors hover:bg-background"
+                    onClick={() => router.push(`/cases/${item.id}`)}
+                    className="cursor-pointer transition-colors hover:bg-background"
                   >
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
@@ -175,6 +187,9 @@ export function CasesView({
                     </td>
                     <td className="px-5 py-3.5 text-[13px] text-text-primary">{item.lawyerName}</td>
                     <td className="px-5 py-3.5 text-[13px] text-text-primary">{item.clientName}</td>
+                    <td className="px-5 py-3.5">
+                      <Badge tone={stageTone[item.stage] ?? "neutral"}>{t.detail.stages[item.stage] ?? item.stage}</Badge>
+                    </td>
                     <td className="px-5 py-3.5">
                       <Badge tone={item.isActive ? "success" : "neutral"}>
                         {item.isActive ? t.active : t.closed}

@@ -5,4 +5,5 @@
 export { CasesView } from "./components/CasesView";
 export { casesApi } from "./api";
 export { casesDictionaries, type CasesDict } from "./i18n";
-export type { CaseRow, CasesSummary, PersonOption } from "./types";
+export { CaseDetailView } from "./components/detail/CaseDetailView";
+export type { CaseRow, CasesSummary, PersonOption, CaseFile } from "./types";

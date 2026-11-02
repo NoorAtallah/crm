@@ -15,6 +15,7 @@ export interface Client {
   email: string;
   roleId: string;
   isActive: boolean;
+  clientType?: string;
 }
 
 /** Free text on the API (≤ 50 chars); these are the values the UI offers. */
@@ -71,6 +72,7 @@ export interface ClientsAbilities {
   canRead: boolean; // employees.read
   canCreate: boolean; // employees.manage
   canReadCases: boolean; // cases.read.all
+  isSuperAdmin: boolean;
 }
 
 export function clientAbilitiesFor(user: {
@@ -82,5 +84,6 @@ export function clientAbilitiesFor(user: {
     canRead: has("employees.read"),
     canCreate: has("employees.manage"),
     canReadCases: has("cases.read.all"),
+    isSuperAdmin: user.isSuperAdmin,
   };
 }

@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
+import { ExportButton } from "../../components/ui/ExportButton";
 import { authApi } from "../../features/auth";
 import {
   CaseStatusChart,
@@ -43,13 +44,16 @@ export default async function DashboardPage({
           <p className="mt-1 text-[14px] text-text-muted">{t.subtitle}</p>
         </div>
 
-        <Suspense fallback={<div className="h-10 w-44" />}>
-          <OfficeFilter
-            offices={summary.offices}
-            selected={officeId}
-            t={t}
-          />
-        </Suspense>
+        <div className="flex items-center gap-2">
+          <ExportButton path="dashboard" fileName="dashboard" locale={locale} />
+          <Suspense fallback={<div className="h-10 w-44" />}>
+            <OfficeFilter
+              offices={summary.offices}
+              selected={officeId}
+              t={t}
+            />
+          </Suspense>
+        </div>
       </header>
 
       <MetricCards metrics={summary.metrics} t={t} locale={locale} />

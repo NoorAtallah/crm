@@ -2,9 +2,10 @@
 
 import { useState, type ReactNode } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { Bell, Menu, Search, X } from "lucide-react";
+import { Menu, Search, X } from "lucide-react";
 import type { AuthUser } from "../../features/auth";
 import { LangToggle } from "../../components/ui/LangToggle";
+import { NotificationBell } from "../../features/notifications";
 import type { Locale } from "../../lib/i18n";
 import { Sidebar } from "./Sidebar";
 import type { ShellDict } from "./navigation";
@@ -84,6 +85,8 @@ export function AppShell({
             />
             <input
               type="search"
+              autoComplete="off"
+              name="global-search"
               placeholder={t.search}
               className="h-9 w-full rounded-lg border border-line bg-background ps-9 pe-3 text-[14px] outline-none transition-colors placeholder:text-text-muted focus:border-brand-charcoal focus:bg-surface"
             />
@@ -91,14 +94,7 @@ export function AppShell({
 
           <div className="ms-auto flex items-center gap-2">
             <LangToggle locale={locale} />
-            <button
-              type="button"
-              aria-label={t.notifications}
-              className="relative flex h-9 w-9 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-background"
-            >
-              <Bell className="h-[18px] w-[18px]" strokeWidth={1.75} />
-              <span className="absolute end-2 top-2 h-1.5 w-1.5 rounded-full bg-brand-champagne" />
-            </button>
+            <NotificationBell locale={locale} />
           </div>
         </header>
 

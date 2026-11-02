@@ -1,9 +1,6 @@
-import { mockDashboardApi } from "./mock";
 import { httpDashboardApi } from "./http";
 
-/** Swap to `httpDashboardApi` when the endpoint is live. */
-export const dashboardApi = mockDashboardApi;
-
-void httpDashboardApi;
+/** Live data. `mock.ts` is kept for offline UI work only. */
+export const dashboardApi = httpDashboardApi;
 
 export type { DashboardApi } from "./contract";
